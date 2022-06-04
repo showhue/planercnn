@@ -58,7 +58,7 @@ class PlaneRCNNDetector():
             checkpoint_dir += '_' + options.suffix
             pass
 
-        ## Indicates that the refinement network is trained separately        
+        ## Indicates that the refinement network is trained separately
         separate = modelType == 'refine'
 
         if not separate:
@@ -479,7 +479,7 @@ def evaluate(options):
         camera[5] = 480
         dataset = InferenceDataset(options, config, image_list=image_list, camera=camera)
     elif 'inference' in options.dataset:
-        image_list = glob.glob(options.customDataFolder + '/*.png') + glob.glob(options.customDataFolder + '/*.jpg')
+        image_list = glob.glob(options.customDataFolder + '/*.png') + glob.glob(options.customDataFolder + '/*.jpg') + glob.glob(options.customDataFolder + '/*.jpeg')
         if os.path.exists(options.customDataFolder + '/camera.txt'):
             camera = np.zeros(6)
             with open(options.customDataFolder + '/camera.txt', 'r') as f:
@@ -495,7 +495,8 @@ def evaluate(options):
             pass
         dataset = InferenceDataset(options, config, image_list=image_list, camera=camera)
         pass
-
+    with open('image_list.txt', 'w') as f_out:
+        f_out.writelines('\n'.join(image_list))
     print('the number of images', len(dataset))
 
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
@@ -565,8 +566,8 @@ def evaluate(options):
                 input_pair.append({'image': images, 'depth': gt_depth, 'bbox': gt_boxes, 'extrinsics': extrinsics, 'segmentation': gt_segmentation, 'camera': camera, 'plane': planes[0], 'masks': masks, 'mask': gt_masks})
                 continue
 
-            if sampleIndex >= options.numTestingImages:
-                break
+            # if sampleIndex >= options.numTestingImages:
+            #     break
 
             with torch.no_grad():
                 detection_pair = detector.detect(sample)
@@ -587,16 +588,16 @@ def evaluate(options):
                     continue
             else:
                 for c in range(len(detection_pair)):
-                    np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy', detection_pair[c]['detection'][:, 6:9])
-                    np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560])
+                    np.save(options.test_dir + '/' + str(sampleIndex) + '_plane_parameters_' + str(c) + '.npy', detection_pair[c]['detection'][:, 6:9])
+                    np.save(options.test_dir + '/' + str(sampleIndex) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560])
                     continue
                 pass
-                            
+
             if sampleIndex < 30 or options.debug or options.dataset != '':
-                visualizeBatchPair(options, config, input_pair, detection_pair, indexOffset=sampleIndex % 500, suffix='_' + name + options.modelType, write_ply=options.testingIndex >= 0, write_new_view=options.testingIndex >= 0 and 'occlusion' in options.suffix)
+                visualizeBatchPair(options, config, input_pair, detection_pair, indexOffset=sampleIndex, suffix='_' + name + options.modelType, write_ply=options.testingIndex >= 0, write_new_view=options.testingIndex >= 0 and 'occlusion' in options.suffix)
                 pass
-            if sampleIndex >= options.numTestingImages:
-                break
+            # if sampleIndex >= options.numTestingImages:
+            #     break
             continue
         if 'inference' not in options.dataset:
             options.keyname = name
