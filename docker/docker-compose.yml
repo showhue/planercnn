@@ -1,19 +1,15 @@
 version: '3.8'
 
 services:
-  pytorch-0.4.1:
-    build: pytorch-0.4.1
+  planercnn:
+    build: planercnn
     tty: true
     environment:
       - ENVIRONMENT=beta
-    user: ${CURRENT_UID}
     volumes:
       - type: bind
         source: ../
         target: /app
-      - /etc/group:/etc/group:ro
-      - /etc/passwd:/etc/passwd:ro
-      - /etc/shadow:/etc/shadow:ro
     deploy:
       resources:
         reservations:

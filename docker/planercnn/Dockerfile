@@ -18,7 +18,6 @@ RUN conda clean -ya
 RUN echo "export PATH=/opt/conda/bin:\$PATH" > /etc/profile.d/conda.sh
 
 RUN pip install http://download.pytorch.org/whl/cu92/torch-0.4.1-cp36-cp36m-linux_x86_64.whl
-RUN pip install scipy scikit-learn pandas cython
 RUN pip install --upgrade pip
 RUN rm -rf ~/.cache/pip
 
