@@ -17,5 +17,6 @@ services:
           - capabilities: [gpu]
     command: >
       sh -c "cd /app &&
+             sh build_lib.sh &&
              python evaluate.py --methods=f --suffix=warping_refine --dataset=inference --customDataFolder=test_images &&
              python classify.py"
