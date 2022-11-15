@@ -1438,7 +1438,7 @@ class MaskRCNN(nn.Module):
                                                                                 config.BACKBONE_SHAPES,
                                                                                 config.BACKBONE_STRIDES,
                                                                                 config.RPN_ANCHOR_STRIDE)).float(), requires_grad=False)
-        if self.torch.cuda.is_available():
+        if torch.cuda.is_available():
             self.anchors = self.anchors.cuda()
 
         ## RPN
@@ -1613,7 +1613,7 @@ class MaskRCNN(nn.Module):
         molded_images = torch.from_numpy(molded_images.transpose(0, 3, 1, 2)).float()
 
         ## To GPU
-        if self.torch.cuda.is_available():
+        if torch.cuda.is_available():
             molded_images = molded_images.cuda()
 
         ## Wrap in variable
@@ -1730,7 +1730,7 @@ class MaskRCNN(nn.Module):
             ##       unnecessary conversions
             h, w = self.config.IMAGE_SHAPE[:2]
             scale = Variable(torch.from_numpy(np.array([h, w, h, w])).float(), requires_grad=False)
-            if self.torch.cuda.is_available():
+            if torch.cuda.is_available():
                 scale = scale.cuda()
             detection_boxes = detections[:, :4] / scale
 
@@ -1755,7 +1755,7 @@ class MaskRCNN(nn.Module):
             ## Normalize coordinates
             h, w = self.config.IMAGE_SHAPE[:2]
             scale = Variable(torch.from_numpy(np.array([h, w, h, w])).float(), requires_grad=False)
-            if self.torch.cuda.is_available():
+            if torch.cuda.is_available():
                 scale = scale.cuda()
             gt_boxes = gt_boxes / scale
 
@@ -1772,7 +1772,7 @@ class MaskRCNN(nn.Module):
                 mrcnn_bbox = Variable(torch.FloatTensor())
                 mrcnn_mask = Variable(torch.FloatTensor())
                 mrcnn_parameters = Variable(torch.FloatTensor())
-                if self.torch.cuda.is_available():
+                if torch.cuda.is_available():
                     mrcnn_class_logits = mrcnn_class_logits.cuda()
                     mrcnn_class = mrcnn_class.cuda()
                     mrcnn_bbox = mrcnn_bbox.cuda()
@@ -1798,7 +1798,7 @@ class MaskRCNN(nn.Module):
             ## Normalize coordinates
             h, w = self.config.IMAGE_SHAPE[:2]
             scale = Variable(torch.from_numpy(np.array([h, w, h, w])).float(), requires_grad=False)
-            if self.torch.cuda.is_available():
+            if torch.cuda.is_available():
                 scale = scale.cuda()
 
             gt_boxes = gt_boxes / scale
@@ -1817,7 +1817,7 @@ class MaskRCNN(nn.Module):
                 mrcnn_bbox = Variable(torch.FloatTensor())
                 mrcnn_mask = Variable(torch.FloatTensor())
                 mrcnn_parameters = Variable(torch.FloatTensor())
-                if self.torch.cuda.is_available():
+                if torch.cuda.is_available():
                     mrcnn_class_logits = mrcnn_class_logits.cuda()
                     mrcnn_class = mrcnn_class.cuda()
                     mrcnn_bbox = mrcnn_bbox.cuda()
@@ -1833,7 +1833,7 @@ class MaskRCNN(nn.Module):
 
             h, w = self.config.IMAGE_SHAPE[:2]
             scale = Variable(torch.from_numpy(np.array([h, w, h, w])).float(), requires_grad=False)
-            if self.torch.cuda.is_available():
+            if torch.cuda.is_available():
                 scale = scale.cuda()
 
             if use_refinement:
@@ -1924,7 +1924,7 @@ class MaskRCNN(nn.Module):
                         boxes = torch.cat([y1, x1, y2, x2], dim=1)
                         pass
                     box_ids = Variable(torch.arange(roi_gt_masks.size()[0]), requires_grad=False).int()
-                    if self.torch.cuda.is_available():
+                    if torch.cuda.is_available():
                         box_ids = box_ids.cuda()
                     roi_gt_masks = Variable(CropAndResizeFunction(self.config.FINAL_MASK_SHAPE[0], self.config.FINAL_MASK_SHAPE[1], 0)(roi_gt_masks.unsqueeze(1), boxes, box_ids).data, requires_grad=False)
                     roi_gt_masks = roi_gt_masks.squeeze(1)
@@ -1940,7 +1940,7 @@ class MaskRCNN(nn.Module):
                 roi_gt_masks = torch.FloatTensor()
                 roi_features = torch.FloatTensor()
                 roi_indices = torch.LongTensor()
-                if self.torch.cuda.is_available():
+                if torch.cuda.is_available():
                     detections = detections.cuda()
                     detection_masks = detection_masks.cuda()
                     roi_gt_parameters = roi_gt_parameters.cuda()
