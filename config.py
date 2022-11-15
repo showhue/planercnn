@@ -97,7 +97,10 @@ class Config(object):
 
     # Image mean (RGB)
     MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
-    MEAN_PIXEL_TENSOR = torch.from_numpy(MEAN_PIXEL.astype(np.float32)).cuda()
+    if torch.cuda.is_available():
+        MEAN_PIXEL_TENSOR = torch.from_numpy(MEAN_PIXEL.astype(np.float32)).cuda()
+    else:
+        MEAN_PIXEL_TENSOR = torch.from_numpy(MEAN_PIXEL.astype(np.float32))
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
@@ -184,9 +187,14 @@ class Config(object):
 
 
         with torch.no_grad():
-            self.URANGE_UNIT = ((torch.arange(self.IMAGE_MAX_DIM, requires_grad=False).cuda().float() + 0.5) / self.IMAGE_MAX_DIM).view((1, -1)).repeat(self.IMAGE_MIN_DIM, 1)
-            self.VRANGE_UNIT = ((torch.arange(self.IMAGE_MIN_DIM, requires_grad=False).cuda().float() + 0.5) / self.IMAGE_MIN_DIM).view((-1, 1)).repeat(1, self.IMAGE_MAX_DIM)
-            self.ONES = torch.ones(self.URANGE_UNIT.shape, requires_grad=False).cuda()
+            if torch.cuda.is_available():
+                self.URANGE_UNIT = ((torch.arange(self.IMAGE_MAX_DIM, requires_grad=False).cuda().float() + 0.5) / self.IMAGE_MAX_DIM).view((1, -1)).repeat(self.IMAGE_MIN_DIM, 1)
+                self.VRANGE_UNIT = ((torch.arange(self.IMAGE_MIN_DIM, requires_grad=False).cuda().float() + 0.5) / self.IMAGE_MIN_DIM).view((-1, 1)).repeat(1, self.IMAGE_MAX_DIM)
+                self.ONES = torch.ones(self.URANGE_UNIT.shape, requires_grad=False).cuda()
+            else:
+                self.URANGE_UNIT = ((torch.arange(self.IMAGE_MAX_DIM, requires_grad=False).float() + 0.5) / self.IMAGE_MAX_DIM).view((1, -1)).repeat(self.IMAGE_MIN_DIM, 1)
+                self.VRANGE_UNIT = ((torch.arange(self.IMAGE_MIN_DIM, requires_grad=False).float() + 0.5) / self.IMAGE_MIN_DIM).view((-1, 1)).repeat(1, self.IMAGE_MAX_DIM)
+                self.ONES = torch.ones(self.URANGE_UNIT.shape, requires_grad=False)
             pass
         
         
@@ -246,7 +254,10 @@ class Config(object):
                     pass
                 self.NUM_CLASSES = len(self.ANCHOR_NORMALS) + 1
                 self.NUM_PARAMETERS = 3
-                self.ANCHOR_NORMALS_TENSOR = torch.from_numpy(self.ANCHOR_NORMALS.astype(np.float32)).cuda()                
+                if torch.cuda.is_available():
+                    self.ANCHOR_NORMALS_TENSOR = torch.from_numpy(self.ANCHOR_NORMALS.astype(np.float32)).cuda()
+                else:
+                    self.ANCHOR_NORMALS_TENSOR = torch.from_numpy(self.ANCHOR_NORMALS.astype(np.float32))
                 if self.OCCLUSION:
                     self.NUM_PARAMETER_CHANNELS = 1
                     pass

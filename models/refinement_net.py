@@ -495,7 +495,10 @@ class RefinementNet(nn.Module):
         result['all_depths'] = all_depths
         result['all_masks'] = all_masks
         
-        all_masks_one_hot = (all_masks.max(0, keepdim=True)[1] == torch.arange(len(all_masks)).cuda().long().view(-1, 1, 1)).float()
+        if torch.cuda.is_available():
+            all_masks_one_hot = (all_masks.max(0, keepdim=True)[1] == torch.arange(len(all_masks)).cuda().long().view(-1, 1, 1)).float()
+        else:
+            all_masks_one_hot = (all_masks.max(0, keepdim=True)[1] == torch.arange(len(all_masks)).long().view(-1, 1, 1)).float()
         plane_depth_one_hot = (all_depths * all_masks_one_hot).sum(0, keepdim=True)
         result['plane_depth_one_hot'] = plane_depth_one_hot.unsqueeze(1)
         return result
@@ -607,7 +610,10 @@ class RefineModel(nn.Module):
              [0,  1.18821287,  0.5],
              [0,           0,    1]]
         with torch.no_grad():
-            self.intrinsics = torch.Tensor(K).cuda()
+            if torch.cuda.is_available():
+                self.intrinsics = torch.Tensor(K).cuda()
+            else:
+                self.intrinsics = torch.Tensor(K)
             pass
         """ the whole network """
 

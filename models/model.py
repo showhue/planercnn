@@ -829,7 +829,10 @@ def refine_detections(rois, probs, deltas, parameters, window, config, return_in
         pre_nms_scores = class_scores[keep.data]
         pre_nms_rois = refined_rois[keep.data]
 
-        ixs = torch.arange(len(pre_nms_class_ids)).long().cuda()
+        if torch.cuda.is_available():
+            ixs = torch.arange(len(pre_nms_class_ids)).long().cuda()
+        else:
+            ixs = torch.arange(len(pre_nms_class_ids)).long()
         ## Sort
         ix_rois = pre_nms_rois
         ix_scores = pre_nms_scores
@@ -1171,7 +1174,10 @@ class Depth(nn.Module):
         
         if self.crop:
             x = torch.nn.functional.interpolate(x, size=(480, 640), mode='bilinear')
-            zeros = torch.zeros((len(x), self.num_output_channels, 80, 640)).cuda()
+            if torch.cuda.is_available():
+                zeros = torch.zeros((len(x), self.num_output_channels, 80, 640)).cuda()
+            else:
+                zeros = torch.zeros((len(x), self.num_output_channels, 80, 640))
             x = torch.cat([zeros, x, zeros], dim=2)
         else:
             x = torch.nn.functional.interpolate(x, size=(640, 640), mode='bilinear')
@@ -1675,7 +1681,10 @@ class MaskRCNN(nn.Module):
             pass
         
         ranges = self.config.getRanges(input[-1]).transpose(1, 2).transpose(0, 1)
-        zeros = torch.zeros(3, (self.config.IMAGE_MAX_DIM - self.config.IMAGE_MIN_DIM) // 2, self.config.IMAGE_MAX_DIM).cuda()
+        if torch.cuda.is_available():
+            zeros = torch.zeros(3, (self.config.IMAGE_MAX_DIM - self.config.IMAGE_MIN_DIM) // 2, self.config.IMAGE_MAX_DIM).cuda()
+        else:
+            zeros = torch.zeros(3, (self.config.IMAGE_MAX_DIM - self.config.IMAGE_MIN_DIM) // 2, self.config.IMAGE_MAX_DIM)
         ranges = torch.cat([zeros, ranges, zeros], dim=1)
         ranges = torch.nn.functional.interpolate(ranges.unsqueeze(0), size=(160, 160), mode='bilinear')
         ranges = self.coordinates(ranges * 10)
@@ -1893,7 +1902,10 @@ class MaskRCNN(nn.Module):
                     roi_gt_masks = gt_masks[roi_gt_box_assignment.data,:,:]
 
                     valid_mask = positive_overlaps.max(0)[1]
-                    valid_mask = (valid_mask[roi_gt_box_assignment] == torch.arange(len(roi_gt_box_assignment)).long().cuda()).long()
+                    if torch.cuda.is_available():
+                        valid_mask = (valid_mask[roi_gt_box_assignment] == torch.arange(len(roi_gt_box_assignment)).long().cuda()).long()
+                    else:
+                        valid_mask = (valid_mask[roi_gt_box_assignment] == torch.arange(len(roi_gt_box_assignment)).long()).long()
                     roi_indices = roi_gt_box_assignment * valid_mask + (-1) * (1 - valid_mask)
 
                     ## Compute mask targets

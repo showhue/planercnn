@@ -31,7 +31,10 @@ def unmoldDetections(config, camera, detections, detection_masks, depth_np, unmo
     if config.GLOBAL_MASK:
         masks = detection_masks[torch.arange(len(detection_masks)).cuda().long(), 0, :, :]
     else:
-        masks = detection_masks[torch.arange(len(detection_masks)).cuda().long(), detections[:, 4].long(), :, :]
+        if torch.cuda.is_available():
+            masks = detection_masks[torch.arange(len(detection_masks)).cuda().long(), detections[:, 4].long(), :, :]
+        else:
+            masks = detection_masks[torch.arange(len(detection_masks)).long(), detections[:, 4].long(), :, :]
         pass
 
     final_masks = []
@@ -45,7 +48,10 @@ def unmoldDetections(config, camera, detections, detection_masks, depth_np, unmo
         mask = F.upsample(mask, size=(box[2] - box[0], box[3] - box[1]), mode='bilinear')
         mask = mask.squeeze(0).squeeze(0)
 
-        final_mask = torch.zeros(config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM).cuda()
+        if torch.cuda.is_available():
+            final_mask = torch.zeros(config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM).cuda()
+        else:
+            final_mask = torch.zeros(config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM)
         final_mask[box[0]:box[2], box[1]:box[3]] = mask
         final_masks.append(final_mask)
         continue
@@ -73,7 +79,10 @@ def unmoldDetections(config, camera, detections, detection_masks, depth_np, unmo
     if 'normal' in config.ANCHOR_TYPE:
         ## Compute offset based normal prediction and depthmap prediction
         ranges = config.getRanges(camera).transpose(1, 2).transpose(0, 1)
-        zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM).cuda()        
+        if torch.cuda.is_available():
+            zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM).cuda()
+        else:
+            zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM)
         ranges = torch.cat([zeros, ranges, zeros], dim=1)
         
         if config.NUM_PARAMETER_CHANNELS == 4:
@@ -188,7 +197,10 @@ def warpModuleXYZ(config, camera, XYZ_1, features_2, extrinsics_1, extrinsics_2,
     warped_features = F.grid_sample(features_2[:, :, padding:-padding], grids.unsqueeze(1).unsqueeze(0))
     numFeatureChannels = int(features_2.shape[1])
     warped_features = warped_features.view((numFeatureChannels, height, width, numPlanes)).transpose(2, 3).transpose(1, 2).transpose(0, 1).contiguous().view((-1, int(features_2.shape[1]), height, width))
-    zeros = torch.zeros((numPlanes, numFeatureChannels, (width - height) // 2, width)).cuda()
+    if torch.cuda.is_available():
+        zeros = torch.zeros((numPlanes, numFeatureChannels, (width - height) // 2, width)).cuda()
+    else:
+        zeros = torch.zeros((numPlanes, numFeatureChannels, (width - height) // 2, width))
     warped_features = torch.cat([zeros, warped_features, zeros], dim=2)
     validMask = validMask.view((numPlanes, height, width))
     validMask = torch.cat([zeros[:, 1], validMask.float(), zeros[:, 1]], dim=1)
@@ -199,7 +211,10 @@ def calcXYZModule(config, camera, detections, masks, depth_np, return_individual
     """Compute a global coordinate map from plane detections"""
     ranges = config.getRanges(camera)
     ranges_ori = ranges
-    zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM).cuda()        
+    if torch.cuda.is_available():
+        zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM).cuda()
+    else:
+        zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM)
     ranges = torch.cat([zeros, ranges.transpose(1, 2).transpose(0, 1), zeros], dim=1)
     XYZ_np = ranges * depth_np
 
@@ -213,11 +228,19 @@ def calcXYZModule(config, camera, detections, masks, depth_np, return_individual
     
     plane_parameters = detections[:, 6:9]
     
-    XYZ = torch.ones((3, config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM)).cuda() * 10
-    depthMask = torch.zeros((config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM)).cuda()
+    if torch.cuda.is_available():
+        XYZ = torch.ones((3, config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM)).cuda() * 10
+        depthMask = torch.zeros((config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM)).cuda()
+    else:
+        XYZ = torch.ones((3, config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM)) * 10
+        depthMask = torch.zeros((config.IMAGE_MAX_DIM, config.IMAGE_MAX_DIM))
+
     planeXYZ = planeXYZModule(ranges_ori, plane_parameters, width=config.IMAGE_MAX_DIM, height=config.IMAGE_MIN_DIM)
     planeXYZ = planeXYZ.transpose(2, 3).transpose(1, 2).transpose(0, 1)
-    zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM, int(planeXYZ.shape[-1])).cuda()
+    if torch.cuda.is_available():
+        zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM, int(planeXYZ.shape[-1])).cuda()
+    else:
+        zeros = torch.zeros(3, (config.IMAGE_MAX_DIM - config.IMAGE_MIN_DIM) // 2, config.IMAGE_MAX_DIM, int(planeXYZ.shape[-1]))
     planeXYZ = torch.cat([zeros, planeXYZ, zeros], dim=1)
 
     one_hot = True    
@@ -333,9 +356,14 @@ class PlaneToDepth(torch.nn.Module):
         self.inverse_depth = inverse_depth
 
         with torch.no_grad():
-            self.URANGE = ((torch.arange(W).float() + 0.5) / W).cuda().view((1, -1)).repeat(H, 1)
-            self.VRANGE = ((torch.arange(H).float() + 0.5) / H).cuda().view((-1, 1)).repeat(1, W)
-            self.ONES = torch.ones((H, W)).cuda()
+            if torch.cuda.is_available():
+                self.URANGE = ((torch.arange(W).float() + 0.5) / W).cuda().view((1, -1)).repeat(H, 1)
+                self.VRANGE = ((torch.arange(H).float() + 0.5) / H).cuda().view((-1, 1)).repeat(1, W)
+                self.ONES = torch.ones((H, W)).cuda()
+            else:
+                self.URANGE = ((torch.arange(W).float() + 0.5) / W).view((1, -1)).repeat(H, 1)
+                self.VRANGE = ((torch.arange(H).float() + 0.5) / H).view((-1, 1)).repeat(1, W)
+                self.ONES = torch.ones((H, W))
             pass
         
     def forward(self, intrinsics, plane, return_XYZ=False):
