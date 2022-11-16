@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  planercnn:
+    build: planercnn
+    tty: true
+    environment:
+      - ENVIRONMENT=beta
+    volumes:
+      - type: bind
+        source: ../
+        target: /app
+    command: >
+      sh -c "cd /app &&
+             python evaluate.py --methods=f --suffix=warping_refine --dataset=inference --customDataFolder=test_images &&
+             python classify.py"
